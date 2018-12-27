@@ -3,8 +3,25 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
+[InitializeOnLoad]
 public class ShortcutsWindow : EditorWindow 
 {
+	static ShortcutsWindow()
+	{
+		EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+	}
+	
+	[MenuItem("Window/Shortcuts")]
+	public static void ShowWindow()
+	{
+		var window = GetWindow(typeof(ShortcutsWindow), false, "Shortcuts");
+		window.autoRepaintOnSceneChange = true;
+	}
+	
+	private const string CACHED_SCENE_KEY = "ShortcutsCachedScene";
+	private const string LOADING_SCENE_KEY = "ShortcutsLoadingScene";
+	private const string AUTO_LOAD_KEY = "ShortcutsAutoLoad";
+	
 	private static readonly GUILayoutOption[] DEFAULT_GUI_BUTTON_OPTIONS =
 	{
 		GUILayout.ExpandWidth(true),
@@ -13,18 +30,32 @@ public class ShortcutsWindow : EditorWindow
 	};
 
 	private SceneAsset _loadingScene;
-	private string _loadingScenePath;
-	private string _cachedScene;
-	private bool _pressedPlay = false;
+	private bool _automaticallyLoadScenes;
 	
-		
-	[MenuItem("Window/Shortcuts")]
-	public static void ShowWindow()
+	private static void HandlePlayModeStateChanged(PlayModeStateChange playModeStateChange)
 	{
-		var window = GetWindow(typeof(ShortcutsWindow), false, "Shortcuts");
-		window.autoRepaintOnSceneChange = true;
+		if (EditorPrefs.GetBool(AUTO_LOAD_KEY, false))
+		{
+			if (playModeStateChange == PlayModeStateChange.EnteredEditMode)
+			{
+				string cachedScene = EditorPrefs.GetString(CACHED_SCENE_KEY);
+				if (!string.IsNullOrEmpty(cachedScene))
+				{
+					EditorSceneManager.OpenScene(cachedScene);
+				}
+			}
+			else if (playModeStateChange == PlayModeStateChange.ExitingEditMode)
+			{
+				EditorPrefs.SetString(CACHED_SCENE_KEY, EditorApplication.currentScene);
+				string loadingScenePath = EditorPrefs.GetString(LOADING_SCENE_KEY);
+				if (!string.IsNullOrEmpty(loadingScenePath))
+				{
+					EditorSceneManager.OpenScene(loadingScenePath);
+				}
+			}
+		}
 	}
-	
+
 	private void DrawEditorButton(string text, Action buttonAction, bool useDefaultLayoutOptions = true, bool isCentered = true, params GUILayoutOption[] options)
 	{
 		if (isCentered)
@@ -67,12 +98,7 @@ public class ShortcutsWindow : EditorWindow
 		
 		EditorGUILayout.Space();
 		
-		DrawLoadingSceneShortcut();		
-	}
-
-	private bool ShouldOpenCachedScene()
-	{
-		return !(_pressedPlay || string.IsNullOrEmpty(_cachedScene));
+		DrawLoadingSceneShortcut();
 	}
 
 	private void DrawSettingsShortcuts()
@@ -121,42 +147,17 @@ public class ShortcutsWindow : EditorWindow
 		EditorGUILayout.Space();
 		
 		_loadingScene = EditorGUILayout.ObjectField("Loading Scene", _loadingScene, typeof(SceneAsset), true) as SceneAsset;
-		_loadingScenePath = AssetDatabase.GetAssetPath(_loadingScene);
-		if (!Application.isPlaying)
+		if (_loadingScene != null)
 		{
-			if (ShouldOpenCachedScene())
-			{
-				EditorSceneManager.OpenScene(_cachedScene);
-				_cachedScene = null;
-			}
-			
-			GUI.enabled = !_pressedPlay;
-			DrawEditorButton(
-				"Play from Loading Scene",
-				() =>
-				{
-					_pressedPlay = true;
-					_cachedScene = EditorApplication.currentScene;
-					EditorSceneManager.OpenScene(_loadingScenePath);
-					EditorApplication.isPlaying = true;
-				}
-			);
-		}
-		else
-		{
-			GUI.enabled = _pressedPlay;
-			DrawEditorButton(
-				"Exit Play Mode",
-				() =>
-				{
-					_pressedPlay = false;
-					EditorApplication.isPlaying = false;
-				}
-			);
+			EditorPrefs.SetString(LOADING_SCENE_KEY, AssetDatabase.GetAssetPath(_loadingScene));
 		}
 
+		_automaticallyLoadScenes = EditorGUILayout.Toggle("Automatically Load Scenes", _automaticallyLoadScenes);
+		EditorPrefs.SetBool(AUTO_LOAD_KEY, _automaticallyLoadScenes);
+		
 		EditorGUILayout.Space();
 		
 		GUILayout.EndVertical();
 	}
 }
+
