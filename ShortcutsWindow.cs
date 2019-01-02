@@ -146,6 +146,12 @@ public class ShortcutsWindow : EditorWindow
 		
 		EditorGUILayout.Space();
 		
+		string loadingScenePath = EditorPrefs.GetString(LOADING_SCENE_KEY);
+		if (_loadingScene == null && !string.IsNullOrEmpty(loadingScenePath))
+		{
+			_loadingScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(loadingScenePath);
+		}
+		
 		_loadingScene = EditorGUILayout.ObjectField("Loading Scene", _loadingScene, typeof(SceneAsset), true) as SceneAsset;
 		if (_loadingScene != null)
 		{
