@@ -59,6 +59,15 @@ namespace Tattva.UnityTools
          return component;
       }
       
+      public static string GetPathInHierarchy(this Transform current) 
+      {
+         if (current.parent == null)
+         {
+            return current.name;
+         }
+         return GetPathInHierarchy(current.parent) + "." + current.name;
+      }
+      
    }
 
    [System.Serializable]
@@ -126,10 +135,10 @@ namespace Tattva.UnityTools
          return new ObjectKey(typeof(T), name, scenePath);
       }
 
-      private static T FindStoredObject<T>(string name)
+      private static T FindStoredObject<T>(string pathInHierarchy, string name = "")
          where T : Component
       {
-         GameObject storedObject = GameObject.Find(name);
+         GameObject storedObject = GameObject.Find(pathInHierarchy);
          if (storedObject != null)
          {
             return storedObject.GetComponent<T>();
@@ -165,7 +174,7 @@ namespace Tattva.UnityTools
             if (objectScene.IsValid())
             {
                string scenePath = objectScene.path;
-               string objectName = objectComponent.name;
+               string objectName = objectComponent.transform.GetPathInHierarchy();
                ObjectKey storedObjectKey = GetStoredObjectKey<T>(objectName, scenePath);
                
                Debug.Log("[RuntimeAssetUpdater] Storing changes on object : " + objectName);
