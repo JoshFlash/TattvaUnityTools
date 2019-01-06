@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -13,7 +14,7 @@ namespace Tattva.UnityTools
    {
       private const BindingFlags FLAGS = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Default | BindingFlags.DeclaredOnly;
 
-      private static readonly List<string> TRANSFORM_SKIP_PROPERTIES = new List<string> {"position", "eulerAngles", "parent", "parentInternal", "hasChanged", "hierarchyCapacity"};
+      private static readonly List<string> TRANSFORM_SKIP_PROPERTIES = new List<string> {"parent", "parentInternal", "hasChanged", "hierarchyCapacity"};
       private static readonly List<string> EMPTY_LIST = new List<string> {};
       
       private static List<string> GetSkipProperties(System.Type type)
@@ -60,16 +61,15 @@ namespace Tattva.UnityTools
       
    }
 
-
    [System.Serializable]
    public class RuntimeAssetUpdater
    {
-      private const string TEMP_ASSET_PATH = "Assets/";
+      private const string TEMP_ASSET_PATH = "Assets/Temp/";
       
       private static readonly Dictionary<string, List<string>> STORED_OBJECTS_BY_SCENE = new Dictionary<string, List<string>>();
       private static readonly Dictionary<ObjectKey, Component> STORED_COMPONENT_BY_OBJECT_KEY = new Dictionary<ObjectKey, Component>();
       
-      private static RuntimeAssetUpdater INSTANCE = new RuntimeAssetUpdater();
+      private static RuntimeAssetUpdater instance = new RuntimeAssetUpdater();
       
       [InitializeOnLoadMethod]
       public static void CreateTransformUpdaterInstance()
@@ -81,9 +81,9 @@ namespace Tattva.UnityTools
          where T : Component
       {
          EditorApplication.playModeStateChanged += HandlePlayModeStateChanged<T>;
-         if (INSTANCE == null)
+         if (instance == null)
          {
-            INSTANCE = new RuntimeAssetUpdater();
+            instance = new RuntimeAssetUpdater();
          }
       }
 
@@ -166,15 +166,21 @@ namespace Tattva.UnityTools
             {
                string scenePath = objectScene.path;
                string objectName = objectComponent.name;
+               ObjectKey storedObjectKey = GetStoredObjectKey<T>(objectName, scenePath);
                
                Debug.Log("[RuntimeAssetUpdater] Storing changes on object : " + objectName);
                
-               GameObject obj = new GameObject(typeof(T) + objectName + scenePath);
+               GameObject obj = new GameObject(storedObjectKey.ToString());
                obj.hideFlags = HideFlags.HideInHierarchy;
                T componentCopy = obj.GetComponent<T>();
                if (componentCopy == null)
                {
                   componentCopy = obj.AddComponent<T>();
+               }
+
+               if (!Directory.Exists(TEMP_ASSET_PATH))
+               {
+                  Directory.CreateDirectory(TEMP_ASSET_PATH);
                }
 
                string assetPath = AssetDatabase.GenerateUniqueAssetPath(TEMP_ASSET_PATH + objectName + ".prefab");
@@ -194,7 +200,6 @@ namespace Tattva.UnityTools
                }
 
                Component storedComponent;
-               ObjectKey storedObjectKey = GetStoredObjectKey<T>(objectName, scenePath);
                if (STORED_COMPONENT_BY_OBJECT_KEY.TryGetValue(storedObjectKey, out storedComponent))
                {
                   STORED_COMPONENT_BY_OBJECT_KEY[storedObjectKey] = copyPrefab.GetComponent<T>();
@@ -219,8 +224,12 @@ namespace Tattva.UnityTools
             Name = name;
             ScenePath = scenePath;
          }
+
+         public override string ToString()
+         {
+            return Type + "." + Name;
+         }
       }
-      
       
    }
 }
