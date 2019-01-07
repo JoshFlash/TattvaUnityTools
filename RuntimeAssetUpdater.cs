@@ -17,7 +17,7 @@ namespace Tattva.UnityTools
       private static readonly List<string> TRANSFORM_SKIP_PROPERTIES = new List<string> {"parent", "parentInternal", "hasChanged", "hierarchyCapacity"};
       private static readonly List<string> EMPTY_LIST = new List<string> {};
       
-      private static List<string> GetSkipProperties(System.Type type)
+      private static List<string> GetSkipProperties(this System.Type type)
       {
          if (type == typeof(Transform))
          {
@@ -32,7 +32,7 @@ namespace Tattva.UnityTools
          System.Type type = component.GetType();
          if (type == source.GetType())
          {
-            List<string> skipProperties = GetSkipProperties(type);
+            List<string> skipProperties = type.GetSkipProperties();
             PropertyInfo[] properties = type.GetProperties(FLAGS);
             foreach (PropertyInfo property in properties)
             {
@@ -65,7 +65,7 @@ namespace Tattva.UnityTools
          {
             return current.name;
          }
-         return GetPathInHierarchy(current.parent) + "." + current.name;
+         return GetPathInHierarchy(current.parent) + "/" + current.name;
       }
       
    }
