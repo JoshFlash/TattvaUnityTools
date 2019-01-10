@@ -84,6 +84,19 @@ namespace Tattva.UnityTools
       public static void CreateTransformUpdaterInstance()
       {
          CreateRuntimeAssetUpdater<Transform>();
+         CreateRuntimeAssetUpdater<Camera>();
+      }
+      
+      [MenuItem("CONTEXT/Transform/Apply Transform Changes")]
+      public static void StoreTransformUpdateValues(MenuCommand menuCommand)
+      {
+         StoreUpdateValues<Transform>(menuCommand);
+      }
+      
+      [MenuItem("CONTEXT/Camera/Apply Camera Changes")]
+      public static void StoreCameraUpdateValues(MenuCommand menuCommand)
+      {
+         StoreUpdateValues<Camera>(menuCommand);
       }
       
       private static void CreateRuntimeAssetUpdater<T>()
@@ -108,7 +121,7 @@ namespace Tattva.UnityTools
                List<string> objectNames = STORED_OBJECTS_BY_SCENE[scenePath];
                foreach (string name in objectNames)
                {
-                  T targetObject = FindStoredObject<T>(name);
+                  T targetObject = FindStoredObjectInScene<T>(name);
                   
                   ObjectKey storedObjectKey = GetStoredObjectKey<T>(name, scenePath);
                   Component sourceObject;
@@ -116,6 +129,9 @@ namespace Tattva.UnityTools
                   {
                      targetObject.CopyComponent(sourceObject);
                   }
+
+                  string sourceObjectPath = AssetDatabase.GetAssetPath(sourceObject);
+                  AssetDatabase.MoveAssetToTrash(sourceObjectPath);
                }
 
                EditorSceneManager.SaveScene(scene);
@@ -135,7 +151,7 @@ namespace Tattva.UnityTools
          return new ObjectKey(typeof(T), name, scenePath);
       }
 
-      private static T FindStoredObject<T>(string pathInHierarchy, string name = "")
+      private static T FindStoredObjectInScene<T>(string pathInHierarchy, string name = "")
          where T : Component
       {
          GameObject storedObject = GameObject.Find(pathInHierarchy);
@@ -156,11 +172,6 @@ namespace Tattva.UnityTools
          return null;
       }
 
-      [MenuItem("CONTEXT/Transform/Apply Transform Changes")]
-      public static void StoreTransformUpdateValues(MenuCommand menuCommand)
-      {
-         StoreUpdateValues<Transform>(menuCommand);
-      }
       
       public static void StoreUpdateValues<T>(MenuCommand menuCommand)
          where T : Component
