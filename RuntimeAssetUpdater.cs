@@ -203,7 +203,7 @@ namespace Tattva.UnityTools
                   Directory.CreateDirectory(TEMP_ASSET_PATH);
                }
 
-               string assetPath = AssetDatabase.GenerateUniqueAssetPath(TEMP_ASSET_PATH + objectName + ".prefab");
+               string assetPath = AssetDatabase.GenerateUniqueAssetPath(TEMP_ASSET_PATH + typeof(T) + ".prefab");
                GameObject copyPrefab = PrefabUtility.CreatePrefab(assetPath, componentCopy.CopyComponent(objectComponent).gameObject);
                
                List<string> storedSceneObjects;
